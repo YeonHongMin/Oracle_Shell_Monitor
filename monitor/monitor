@@ -1,0 +1,618 @@
+#!/bin/sh
+
+# ---------- Configuration ----------------------------------------------------
+if [ -n "$MONITOR_HOME" ] ; then
+  MONITOR=$MONITOR_HOME
+else
+  MONITOR=`dirname "$0"`
+fi
+export MONITOR
+
+DB_USER=${DB_USER:-system}
+DB_PASS=${DB_PASS:-manager}
+DB_ROLE=${DB_ROLE:-}
+if [ -n "$DB_ROLE" ] ; then
+  DB_CONN="${DB_USER}/${DB_PASS} as ${DB_ROLE}"
+else
+  DB_CONN="${DB_USER}/${DB_PASS}"
+fi
+
+# ---------- Helpers ----------------------------------------------------------
+print_done(){
+  echo
+  echo "Press Enter Key to continue..."
+}
+
+print_version(){
+  echo "============================="
+  echo " Oracle RDBMS Monitor Ver1.0 "
+  echo "============================="
+}
+
+print_warning(){
+  echo "=================================================="
+  echo " (Disclaimer)                                     "
+  echo " These scripts come without warranty of any kind. "
+  echo " Use them at your own risk.                       "
+  echo "=================================================="
+}
+
+# Run a sqlplus script.
+run_sql(){
+  sqlplus -s -L "$DB_CONN" @"$MONITOR/sql/$1"
+  echo
+}
+
+ensure_sqlid_format(){
+  echo "column sql_id format a13" > "$MONITOR/sql/sqlid_format.sql"
+}
+
+# Detect DB version (major release number)
+db_version_chk(){
+  ORA_VER=`sqlplus -s -L "$DB_CONN" <<'EOSQL'
+set heading off feedback off pagesize 0
+select regexp_substr(version,'^[0-9]+') from v$instance;
+exit
+EOSQL
+`
+  ORA_VER=`echo "$ORA_VER" | tr -d ' '`
+  ensure_sqlid_format
+}
+
+# ---------- Argument handling ------------------------------------------------
+if [ $# -ne 0 ] ; then
+  echo
+  echo " Oracle Monitor Shell"
+  echo " --------------------"
+  echo " Usage : $0 "
+  echo
+  echo " Environment overrides:"
+  echo "   MONITOR_HOME=<dir>   override script directory"
+  echo "   DB_USER=<user>       sqlplus user (default system)"
+  echo "   DB_PASS=<pass>       sqlplus password (default manager)"
+  echo "   DB_ROLE=<role>       optional sqlplus role (example: sysdba)"
+  echo "   ORACLE_SID, ORACLE_HOME must already be set"
+  echo
+  exit
+fi
+
+clear
+print_version
+print_warning
+db_version_chk
+
+# ---------- Menu -------------------------------------------------------------
+print_menu(){
+echo "  Oracle Version : $ORA_VER  (SQL_ID_FORMAT: `cat "$MONITOR/sql/sqlid_format.sql"`)"
+echo "  Connect as     : $DB_CONN  | ORACLE_SID=$ORACLE_SID"
+echo " -----------------------------------------------------------------------------------"
+echo "  1.GENERAL                               |  2.SHARED MEMORY                        "
+echo " ---------------------------------------- + ----------------------------------------"
+echo "  11 - Instance/Database Info             |  21 - Database Buffer Hit Ratio         "
+echo "  12 - Parameter Info (non-default)       |  22 - Shared Pool / Library Hit Ratio   "
+echo "  13 - Memory Info (SGA/PGA)              |  23 - Latch Contention                  "
+echo "  14 - Backup Status                      |                                         "
+echo " -----------------------------------------------------------------------------------"
+echo "  3.SESSION                               |  4.WAIT EVENT/LOCK                      "
+echo " ---------------------------------------- + ----------------------------------------"
+echo "  31 - Current Session Info               |  41 - Current Lock Info                 "
+echo "  32 - Current Active Session Info        |  42 - Hierarchical Lock Info            "
+echo "  33 - Active Session Wait Info           |  43 - Hierarchical Lock Info(RAC)       "
+echo "  34 - Active Session Running SQL         |  44 - System Event                      "
+echo "  35 - Current Transaction                |  45 - Session Event                     "
+echo "  36 - Open Cursor                        |  46 - Session Wait                      "
+echo "  37 - Current Session(RAC)               |  47 - Sysstat                           "
+echo "  38 - Current Active Session(RAC)        |  48 - Top Wait Event                    "
+echo "  39 - Active Session Wait(RAC)           |  49 - Redo Nowait Info                  "
+echo " -----------------------------------------------------------------------------------"
+echo "  5.SPACE                                 |  6.I/O                                  "
+echo " ---------------------------------------- + ----------------------------------------"
+echo "  51 - Database File Info                 |  61 - File I/O Info                     "
+echo "  52 - Tablespace Usage                   |  62 - Session I/O Info                  "
+echo "  53 - Undo Segment Usage                 |  63 - Archivelog Count                  "
+echo "  54 - Temp Segment Usage                 |                                         "
+echo " -----------------------------------------------------------------------------------"
+echo "  7.OBJECT                                |  8.SQL                                  "
+echo " ---------------------------------------- + ----------------------------------------"
+echo "  71 - Schema Object Count                |  81 - SQL Plan(Input SQL_ID)            "
+echo "  72 - Object Invalid Count               |  82 - Top SQL                           "
+echo "  73 - Object Invalid List                |  83 - Check Static Query Pattern        "
+echo "  74 - Segment Size(Top 50)               |                                         "
+echo " -----------------------------------------------------------------------------------"
+echo "  9.AWR (Use Carefully)                   |  0.OTHER                                "
+echo " ---------------------------------------- + ----------------------------------------"
+echo "  91 - Create AWR Snapshot                |  M - Auto Refresh Monitoring            "
+echo "  92 - Create AWR Snapshot (RAC)          |  S - Save To File                       "
+echo "  93 - Show AWR Snapshot List             |                                         "
+echo "  94 - Create AWR Report                  |  X - EXIT                               "
+echo " -----------------------------------------------------------------------------------"
+echo
+}
+
+choose_num(){
+  echo
+  echo -n " Choose the Number or Command : "
+}
+
+wrong_number(){
+  echo
+  echo "You chose wrong number."
+  echo "Try Again..."
+  sleep 1
+}
+
+show_category(){
+  clear
+  case "$1" in
+    1)
+      echo "===================="
+      echo " 1.GENERAL"
+      echo "===================="
+      echo " 11 - Instance/Database Info"
+      echo " 12 - Parameter Info (non-default)"
+      echo " 13 - Memory Info (SGA/PGA)"
+      echo " 14 - Backup Status" ;;
+    2)
+      echo "===================="
+      echo " 2.SHARED MEMORY"
+      echo "===================="
+      echo " 21 - Database Buffer Hit Ratio"
+      echo " 22 - Shared Pool / Library Hit Ratio"
+      echo " 23 - Latch Contention" ;;
+    3)
+      echo "===================="
+      echo " 3.SESSION"
+      echo "===================="
+      echo " 31 - Current Session Info"
+      echo " 32 - Current Active Session Info"
+      echo " 33 - Active Session Wait Info"
+      echo " 34 - Active Session Running SQL"
+      echo " 35 - Current Transaction"
+      echo " 36 - Open Cursor"
+      echo " 37 - Current Session(RAC)"
+      echo " 38 - Current Active Session(RAC)"
+      echo " 39 - Active Session Wait(RAC)" ;;
+    4)
+      echo "===================="
+      echo " 4.WAIT EVENT/LOCK"
+      echo "===================="
+      echo " 41 - Current Lock Info"
+      echo " 42 - Hierarchical Lock Info"
+      echo " 43 - Hierarchical Lock Info(RAC)"
+      echo " 44 - System Event"
+      echo " 45 - Session Event"
+      echo " 46 - Session Wait"
+      echo " 47 - Sysstat"
+      echo " 48 - Top Wait Event"
+      echo " 49 - Redo Nowait Info" ;;
+    5)
+      echo "===================="
+      echo " 5.SPACE"
+      echo "===================="
+      echo " 51 - Database File Info"
+      echo " 52 - Tablespace Usage"
+      echo " 53 - Undo Segment Usage"
+      echo " 54 - Temp Segment Usage" ;;
+    6)
+      echo "===================="
+      echo " 6.I/O"
+      echo "===================="
+      echo " 61 - File I/O Info"
+      echo " 62 - Session I/O Info"
+      echo " 63 - Archivelog Count" ;;
+    7)
+      echo "===================="
+      echo " 7.OBJECT"
+      echo "===================="
+      echo " 71 - Schema Object Count"
+      echo " 72 - Object Invalid Count"
+      echo " 73 - Object Invalid List"
+      echo " 74 - Segment Size(Top 50)" ;;
+    8)
+      echo "===================="
+      echo " 8.SQL"
+      echo "===================="
+      echo " 81 - SQL Plan(Input SQL_ID)"
+      echo " 82 - Top SQL"
+      echo " 83 - Check Static Query Pattern" ;;
+    9)
+      echo "===================="
+      echo " 9.AWR (Use Carefully)"
+      echo "===================="
+      echo " 91 - Create AWR Snapshot"
+      echo " 92 - Create AWR Snapshot (RAC)"
+      echo " 93 - Show AWR Snapshot List"
+      echo " 94 - Create AWR Report" ;;
+    0)
+      echo "===================="
+      echo " 0.OTHER"
+      echo "===================="
+      echo " M - Auto Refresh Monitoring"
+      echo " S - Save To File"
+      echo " X - EXIT" ;;
+  esac
+  choose_num
+}
+
+# ---------- Main loop --------------------------------------------------------
+while true
+do
+clear
+print_version
+echo "  Oracle Version : $ORA_VER"
+echo " -----------------------------------------------------"
+print_menu
+choose_num
+read i_number || exit 0
+case $i_number in
+  1|2|3|4|5|6|7|8|9|0)
+    show_category "$i_number"
+    read i_number || exit 0
+    if [ -z "$i_number" ] ; then
+      continue
+    fi ;;
+esac
+
+case $i_number in
+
+# 1.GENERAL ---------------------------------------
+11) clear
+    echo "============================"
+    echo " Oracle Instance Information"
+    echo "============================"
+    run_sql 1_instance.sql
+    print_done; read tm ;;
+12) clear
+    echo "===================="
+    echo " Parameter Info     "
+    echo "===================="
+    run_sql 1_parameter.sql
+    print_done; read tm ;;
+13) clear
+    echo "===================="
+    echo " SGA Information    "
+    echo "===================="
+    run_sql 1_sga.sql
+    echo "============================="
+    echo " Memory Usage (SGA/PGA)      "
+    echo "============================="
+    run_sql 1_used_memory.sql
+    print_done; read tm ;;
+14) clear
+    echo "==============="
+    echo " Backup Status "
+    echo "==============="
+    run_sql 1_backup_status.sql
+    print_done; read tm ;;
+
+# 2.SHARED MEMORY ---------------------------------
+21) clear
+    echo "==========================="
+    echo " Database Buffer Hit Ratio "
+    echo "==========================="
+    run_sql 2_bchr.sql
+    print_done; read tm ;;
+22) clear
+    echo "==============================="
+    echo " Shared Pool / Library Cache   "
+    echo "==============================="
+    run_sql 2_sharedcache.sql
+    print_done; read tm ;;
+23) clear
+    echo "==========================="
+    echo " Latch Contention          "
+    echo "==========================="
+    run_sql 2_latch.sql
+    print_done; read tm ;;
+
+# 3.SESSION ---------------------------------------
+31) clear
+    echo "======================"
+    echo " Current Session Info "
+    echo "======================"
+    run_sql 3_current_session.sql
+    print_done; read tm ;;
+32) clear
+    echo "============================"
+    echo " Current Active Session     "
+    echo "============================"
+    run_sql 3_run_session.sql
+    print_done; read tm ;;
+33) clear
+    echo "============================"
+    echo " Active Session Wait Info   "
+    echo "============================"
+    run_sql 3_run_session_wait.sql
+    print_done; read tm ;;
+34) clear
+    echo "================================"
+    echo " Active Session Running SQL     "
+    echo "================================"
+    run_sql 3_running_sql.sql
+    print_done; read tm ;;
+35) clear
+    echo "====================="
+    echo " Current Transaction "
+    echo "====================="
+    run_sql 3_current_transaction.sql
+    print_done; read tm ;;
+36) clear
+    echo "===================="
+    echo " Open Cursor Status "
+    echo "===================="
+    run_sql 3_open_cursor.sql
+    print_done; read tm ;;
+37) clear
+    echo "============================="
+    echo " Current Session For RAC     "
+    echo "============================="
+    run_sql 3_current_session_rac.sql
+    print_done; read tm ;;
+38) clear
+    echo "================================="
+    echo " Current Active Session For RAC  "
+    echo "================================="
+    run_sql 3_run_session_rac.sql
+    print_done; read tm ;;
+39) clear
+    echo "================================"
+    echo " Active Session Wait For RAC    "
+    echo "================================"
+    run_sql 3_run_session_wait_rac.sql
+    print_done; read tm ;;
+
+# 4.WAIT EVENT/LOCK -------------------------------
+41) clear
+    echo "======================="
+    echo " Blocking/Waiting Lock "
+    echo "======================="
+    run_sql 4_blockinglock.sql
+    echo "======================"
+    echo " DML Lock Information "
+    echo "======================"
+    run_sql 4_lockinfo.sql
+    echo "==================================="
+    echo " Library Cache Lock (Object Lock)  "
+    echo "==================================="
+    run_sql 4_lockobj.sql
+    print_done; read tm ;;
+42) clear
+    echo "========================"
+    echo " Hierarchical Lock Info "
+    echo "========================"
+    run_sql 4_hierarchical_lock.sql
+    print_done; read tm ;;
+43) clear
+    echo "============================="
+    echo " Hierarchical Lock Info(RAC) "
+    echo "============================="
+    run_sql 4_hierarchical_lock_rac.sql
+    print_done; read tm ;;
+44) clear
+    echo "=============="
+    echo " System Event "
+    echo "=============="
+    run_sql 4_system_event.sql
+    print_done; read tm ;;
+45) clear
+    sh "$MONITOR/sql/4_session_event.sh"
+    clear
+    echo "==============="
+    echo " Session Event "
+    echo "==============="
+    run_sql 4_session_event.sql
+    print_done; read tm ;;
+46) clear
+    echo "=============="
+    echo " Session Wait "
+    echo "=============="
+    run_sql 4_session_wait.sql
+    print_done; read tm ;;
+47) clear
+    echo "========="
+    echo " Sysstat "
+    echo "========="
+    run_sql 4_sysstat.sql
+    print_done; read tm ;;
+48) clear
+    echo "===================="
+    echo " Top Wait Events    "
+    echo "===================="
+    run_sql 4_jcnt.sql
+    print_done; read tm ;;
+49) clear
+    echo "============="
+    echo " Redo Nowait "
+    echo "============="
+    run_sql 4_redonowait.sql
+    print_done; read tm ;;
+
+# 5.SPACE -----------------------------------------
+51) clear
+    echo "========================"
+    echo " Controlfile Information"
+    echo "========================"
+    run_sql 5_control.sql
+    echo "===================="
+    echo " Logfile Information"
+    echo "===================="
+    run_sql 5_logfile.sql
+    echo "====================="
+    echo " Datafile Information"
+    echo "====================="
+    run_sql 5_datafile.sql
+    print_done; read tm ;;
+52) clear
+    echo "======================="
+    echo " Tablespace Information"
+    echo "======================="
+    run_sql 5_tablespace.sql
+    echo "============================"
+    echo " Temp Tablespace Information"
+    echo "============================"
+    run_sql 5_temp_tablespace.sql
+    print_done; read tm ;;
+53) clear
+    echo "=========================="
+    echo " Current Undo Information "
+    echo "=========================="
+    run_sql 5_undo.sql
+    echo "================="
+    echo " Undo Usage Type "
+    echo "================="
+    run_sql 5_undo_usage_type.sql
+    print_done; read tm ;;
+54) clear
+    echo "===================="
+    echo " Temp Segment Usage "
+    echo "===================="
+    run_sql 5_tempseg_usage.sql
+    echo "===================="
+    echo " Temp Total Usage   "
+    echo "===================="
+    run_sql 5_tempseg_tot_usage.sql
+    print_done; read tm ;;
+
+# 6.I/O -------------------------------------------
+61) clear
+    echo "======================"
+    echo " File I/O Information "
+    echo "======================"
+    run_sql 6_fileio.sql
+    print_done; read tm ;;
+62) clear
+    echo "========================="
+    echo " Session I/O Information "
+    echo "========================="
+    run_sql 6_session_io.sql
+    print_done; read tm ;;
+63) clear
+    echo "====================================="
+    echo " Archive Log Count (Archivelog Only) "
+    echo "====================================="
+    run_sql 6_loghistory.sql
+    print_done; read tm ;;
+
+# 7.OBJECT ----------------------------------------
+71) clear
+    echo "====================="
+    echo " Schema Object Count "
+    echo "====================="
+    run_sql 7_object_count.sql
+    print_done; read tm ;;
+72) clear
+    echo "======================"
+    echo " Object Invalid Count "
+    echo "======================"
+    run_sql 7_invalid_count.sql
+    print_done; read tm ;;
+73) clear
+    echo "====================="
+    echo " Object Invalid List "
+    echo "====================="
+    run_sql 7_invalid_object.sql
+    print_done; read tm ;;
+74) clear
+    echo "======================="
+    echo " Segment Size(Top 50)  "
+    echo "======================="
+    run_sql 7_segment_size.sql
+    print_done; read tm ;;
+
+# 8.SQL -------------------------------------------
+81) clear
+    echo "=========="
+    echo " SQL PLAN "
+    echo "=========="
+    run_sql 8_sql_plan.sql
+    print_done; read tm ;;
+82) clear
+    echo "========="
+    echo " TOP SQL "
+    echo "========="
+    run_sql 8_topquery.sql
+    print_done; read tm ;;
+83) clear
+    echo "============================"
+    echo " Check Static Query Pattern "
+    echo "============================"
+    run_sql 8_check_static_query.sql
+    print_done; read tm ;;
+
+# 9.AWR -------------------------------------------
+91) clear
+    echo "====================="
+    echo " AWR Snapshot Create "
+    echo "====================="
+    echo -n "Create AWR Snapshot? (Y/N): "
+    read cre_awr_snap
+    if [ "$cre_awr_snap" = "Y" -o "$cre_awr_snap" = "y" ] ; then
+      run_sql 9_awr_create.sql
+      print_done; read tm
+    fi ;;
+92) clear
+    echo "============================="
+    echo " AWR Snapshot Create For RAC "
+    echo "============================="
+    echo -n "Create AWR Snapshot? (Y/N): "
+    read cre_awr_snap
+    if [ "$cre_awr_snap" = "Y" -o "$cre_awr_snap" = "y" ] ; then
+      run_sql 9_awr_create_rac.sql
+      print_done; read tm
+    fi ;;
+93) clear
+    echo "==================="
+    echo " AWR Snapshot List "
+    echo "==================="
+    run_sql 9_awr_show.sql
+    print_done; read tm ;;
+94) clear
+    echo "==================="
+    echo " AWR Report Create "
+    echo "==================="
+    run_sql 9_awr_show.sql
+    echo -n "Create AWR Report? (Y/N): "
+    read cre_awr_snap
+    if [ "$cre_awr_snap" = "Y" -o "$cre_awr_snap" = "y" ] ; then
+      run_sql 9_awr_report.sql
+      ls -1t awrrpt_*.txt 2>/dev/null | head -1
+      print_done; read tm
+    fi ;;
+
+# 0.OTHER -----------------------------------------
+m|M)
+    clear
+    echo "================================"
+    echo " Oracle Auto Refresh Monitoring "
+    echo "================================"
+    sh "$MONITOR/tam.run"
+    echo -n "Option   : "; read tam_option
+    echo -n "Interval : "; read tam_int
+    sh "$MONITOR/tam.run" $tam_option $tam_int
+    print_done; read tm ;;
+s|S)
+    clear
+    echo "=========================="
+    echo " Oracle Monitoring Report "
+    echo "=========================="
+    echo -n "Create Monitoring Report? (Y/N): "
+    read cre_mon_rpt
+    if [ "$cre_mon_rpt" = "Y" -o "$cre_mon_rpt" = "y" ] ; then
+      filename=monitor_`date +%y%m%d%H%M.log`
+      sh "$MONITOR/sql/0_save_file.sh"
+      run_sql 0_save_file.sql >> "$MONITOR/log/$filename"
+      echo
+      echo "Monitoring File Saved!"
+      echo "filename : $MONITOR/log/$filename"
+      echo
+      print_done; read tm
+    fi ;;
+x|X)
+    clear
+    echo "Good bye..."
+    echo
+    exit ;;
+*)
+    wrong_number ;;
+esac
+done

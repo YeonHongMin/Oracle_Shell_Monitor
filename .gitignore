@@ -1,0 +1,5 @@
+monitor/log/
+monitor/sql/0_save_file.sql
+monitor/sql/0_save_file_temp.sql
+monitor/sql/4_session_event.sql
+monitor/sql/sqlid_format.sql

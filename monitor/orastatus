@@ -1,0 +1,60 @@
+#!/bin/sh
+#########################################################################################
+# Oracle Status — print background process state for the local instance
+#########################################################################################
+
+SRV_NAME=${ORACLE_SID:-?}
+
+echo
+echo "==============================================================================="
+echo " Oracle Status"
+echo "-------------------------------------------------------------------------------"
+echo "  ORACLE_SID  = $SRV_NAME"
+echo "  ORACLE_HOME = $ORACLE_HOME"
+
+db_stat=`ps -ef | grep "ora_pmon_$SRV_NAME" | grep -v grep | wc -l`
+
+if [ "$db_stat" = "0" ] ; then
+  echo "  ----------------------------------------------"
+  echo "  Not Running..."
+  echo "  ----------------------------------------------"
+else
+  PMON=`ps -ef | grep "ora_pmon_$SRV_NAME"  | grep -v grep | awk '{print $2}'`
+  SMON=`ps -ef | grep "ora_smon_$SRV_NAME"  | grep -v grep | awk '{print $2}'`
+  DBW0=`ps -ef | grep "ora_dbw0_$SRV_NAME"  | grep -v grep | awk '{print $2}'`
+  LGWR=`ps -ef | grep "ora_lgwr_$SRV_NAME"  | grep -v grep | awk '{print $2}'`
+  CKPT=`ps -ef | grep "ora_ckpt_$SRV_NAME"  | grep -v grep | awk '{print $2}'`
+  ARCN=`ps -ef | grep "ora_arc[0-9]_$SRV_NAME"  | grep -v grep | awk '{print $2}' | tr '\n' ' '`
+  MMON=`ps -ef | grep "ora_mmon_$SRV_NAME"  | grep -v grep | awk '{print $2}'`
+  LREG=`ps -ef | grep -E "ora_(lreg|lgwr)_$SRV_NAME"  | grep -v grep | awk '{print $2}' | head -1`
+  LSNR=`ps -ef | grep "tnslsnr"             | grep -v grep | awk '{print $2}' | tr '\n' ' '`
+
+  SVR_CT=`ps -ef | grep "oracle$SRV_NAME"   | grep -v grep | wc -l`
+
+  echo "  -------------------"
+  echo "  Running..."
+  echo "  -------------------"
+  echo
+  echo "  ======================================"
+  echo "  Background Processes"
+  echo "  ======================================"
+  echo "  Process Name                              Process ID"
+  echo "  ----------------------------------------  --------------"
+  printf "  %-40s  %s\n" "TNS Listener (tnslsnr)"   "$LSNR"
+  printf "  %-40s  %s\n" "PMON (process monitor)"   "$PMON"
+  printf "  %-40s  %s\n" "SMON (system monitor)"    "$SMON"
+  printf "  %-40s  %s\n" "DBW0 (db writer)"         "$DBW0"
+  printf "  %-40s  %s\n" "LGWR (log writer)"        "$LGWR"
+  printf "  %-40s  %s\n" "CKPT (checkpoint)"        "$CKPT"
+  printf "  %-40s  %s\n" "ARCn (archiver)"          "$ARCN"
+  printf "  %-40s  %s\n" "MMON (manageability mon)" "$MMON"
+  echo
+  echo "  ======================================"
+  echo "  Server Process Status"
+  echo "  ======================================"
+  printf "  %-40s  %s\n" "Server process count" "$SVR_CT"
+  echo
+fi
+
+echo "==============================================================================="
+echo
