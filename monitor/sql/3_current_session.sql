@@ -12,6 +12,7 @@ col "PGA(KB)"    format 999,999
 col "Block_Sess" format a10
 col "Client_Pid" format a16
 col "Server_Pid" format a16
+col "Con"        format 9999
 @@sqlid_format.sql
 
 select * from
@@ -27,6 +28,7 @@ select * from
       , nvl(s.sql_id, s.prev_sql_id)                    "SQL_ID"
       , substr(s.process, 1, 16)                        "Client_Pid"
       , substr(p.spid, 1, 16)                           "Server_Pid"
+      , s.con_id                                        "Con"
  from   v$session s, v$process p
  where  s.paddr = p.addr
  order  by 1,5
@@ -34,7 +36,7 @@ select * from
 union all
 select '[Run: '||sum(decode(status,'ACTIVE',cnt,0))||']'
      , '[Tot: '||sum(cnt)||']'
-     , null,null,null,null,null,null,null,null,null
+     , null,null,null,null,null,null,null,null,null,null
 from (
    select status, count(*) cnt
    from   v$session

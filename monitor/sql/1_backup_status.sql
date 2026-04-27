@@ -18,6 +18,7 @@ col "Deleted"      format a8
 col "Tablespace Name" format a20
 col "Datafile"     format a80
 col "Backup Mode"  format a12
+col "Con"          format 9999
 
 prompt
 prompt ===== RMAN Backup Job History (recent 30) =====
@@ -79,14 +80,15 @@ where rownum <= 30
 prompt
 prompt ===== Datafile Backup Mode Status =====
 
-select a.tablespace_name "Tablespace Name"
+select a.con_id          "Con"
+     , a.tablespace_name "Tablespace Name"
      , a.file_name       "Datafile"
      , b.status          "Backup Mode"
      , to_char(b.time, 'YYYY/MM/DD HH24:MI:SS') "Start Time"
-from   dba_data_files a
+from   cdb_data_files a
      , v$backup b
 where  a.file_id = b.file#
-order  by 1,2
+order  by a.con_id, a.tablespace_name, a.file_name
 /
 
 exit

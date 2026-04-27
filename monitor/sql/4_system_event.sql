@@ -8,10 +8,12 @@ col total_timeouts format 999,999,999
 col time_waited    format 9,999,999,999
 col average_wait   format 999,999,999.99
 col avg_wait_ms    format 9,999,999.99
+col "Con"          format 9999
 
-select event, time_waited, total_waits, total_timeouts, average_wait, avg_wait_ms
+select "Con", event, time_waited, total_waits, total_timeouts, average_wait, avg_wait_ms
 from   (
-  select event
+  select con_id "Con"
+       , event
        , total_waits
        , total_timeouts
        , time_waited

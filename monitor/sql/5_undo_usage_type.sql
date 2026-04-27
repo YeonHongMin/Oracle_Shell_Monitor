@@ -3,6 +3,7 @@ set feedback off
 
 col tablespace_name format a18
 col "SQL Type"      format a15
+col "Con"           format 9999
 @@sqlid_format.sql
 
 select vs.sid
@@ -14,7 +15,8 @@ select vs.sid
      , vt.used_ublk
      , vr.curext
      , vr.xacts
-from   dba_rollback_segs dr
+     , vs.con_id           "Con"
+from   cdb_rollback_segs dr
      , v$rollstat vr
      , v$transaction vt
      , v$session vs
@@ -23,7 +25,7 @@ where  dr.segment_id = vr.usn
   and  vr.usn        = vt.xidusn
   and  vt.addr       = vs.taddr
   and  vs.command    = c.command_type(+)
-order  by 1
+order  by vs.con_id, vs.sid
 /
 
 exit

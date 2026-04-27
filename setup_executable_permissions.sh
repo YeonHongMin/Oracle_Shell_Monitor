@@ -7,7 +7,7 @@ cd "$ROOT"
 
 files="
 monitor/monitor
-monitor/tam.run
+monitor/auto_refresh.sh
 monitor/dml_view.sh
 monitor/mon.sh
 monitor/ha_mon.sh

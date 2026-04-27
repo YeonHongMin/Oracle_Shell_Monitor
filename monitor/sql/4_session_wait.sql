@@ -10,6 +10,7 @@ col "Event"           format a35
 col "Wait Sec"  format 9,999,999
 col "Wait_Time" format 9,999,999
 col "State"     format a18
+col "Con"       format 9999
 
 select vsw.sid                    "SID"
      , substr(vs.process, 1, 16)  "PID"
@@ -20,6 +21,7 @@ select vsw.sid                    "SID"
      , vsw.seconds_in_wait        "Wait Sec"
      , substr(vs.program, 1, 25)  "Program"
      , substr(vs.machine, 1, 20)  "Machine"
+     , vs.con_id                  "Con"
 from   v$session vs, v$session_wait vsw
 where  vs.sid = vsw.sid
   and  vsw.wait_class != 'Idle'

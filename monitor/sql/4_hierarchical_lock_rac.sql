@@ -2,6 +2,7 @@ set feedback off
 set linesize 150
 set pagesize 100
 col "Inst-Sid-Path" format a60
+col "Con"           format 9999
 
 select path "Inst-Sid-Path"
      , type
@@ -9,6 +10,7 @@ select path "Inst-Sid-Path"
      , id2
      , lmode
      , request
+     , con_id "Con"
 from (
   select substr(sys_connect_by_path('('||inst_id||')'||sid, '/'), 2) path
        , level lev

@@ -9,6 +9,7 @@ col "Used_blk"   format 999,999,999
 col "Usn"        format 99999
 col "Time"       format a10
 col "[SQL_ID]Text" format a60
+col "Con"          format 9999
 
 select 0 "SID"
      , '[Total : '||count(*)||']' "User"
@@ -18,6 +19,7 @@ select 0 "SID"
      , 0    "Used_blk"
      , null "Time"
      , null "[SQL_ID]Text"
+     , null "Con"
 from   v$transaction
 union all
 select distinct
@@ -31,6 +33,7 @@ select distinct
        lpad(floor(mod((sysdate - vt.start_date)*1440, 60)),2,0) || ':'||
        lpad(floor(mod((sysdate - vt.start_date)*86400, 60)),2,0)
      , '['||nvl(vs.sql_id, vs.prev_sql_id)||'] '||vst.sql_text
+     , vs.con_id
 from   v$session     vs
      , v$transaction vt
      , (select sql_id, sql_text from v$sqltext where piece=0) vst

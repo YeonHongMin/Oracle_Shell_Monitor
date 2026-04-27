@@ -7,8 +7,10 @@ col "Misses"         format 999,999,999,999
 col "Sleeps"         format 999,999,999
 col "wait_time(s)"   format 999,999,999,999
 col "Nowait Request" format 999,999,999,999
+col "Con"            format 9999
 
-select name
+select con_id "Con"
+     , name
      , gets   "Gets"
      , misses "Misses"
      , decode(gets, 0, -1, round((misses/gets)*100, 2))             "miss(%)"
@@ -21,7 +23,7 @@ select name
                                                                     "Nowait Miss(%)"
 from   v$latch
 where  wait_time != 0
-order  by 7 desc
+order  by 8 desc
 /
 
 exit

@@ -585,10 +585,10 @@ m|M)
     echo "================================"
     echo " Oracle Auto Refresh Monitoring "
     echo "================================"
-    sh "$MONITOR/tam.run"
+    sh "$MONITOR/auto_refresh.sh"
     echo -n "Option   : "; read tam_option
     echo -n "Interval : "; read tam_int
-    sh "$MONITOR/tam.run" $tam_option $tam_int
+    sh "$MONITOR/auto_refresh.sh" $tam_option $tam_int
     print_done; read tm ;;
 s|S)
     clear

@@ -1,16 +1,17 @@
 set feedback off
-set linesize 100
+set linesize 110
 set pagesize 100
 
 col "Parameter Name" format a45
 col "Value"          format a45
+col "Con"            format 9999
 
-select name "Parameter Name", value "Value"
+select con_id "Con", name "Parameter Name", value "Value"
 from   v$parameter
-where  isdefault = 'FALSE'
+where  (isdefault = 'FALSE'
    or  name in ('optimizer_mode','memory_target','sga_target','pga_aggregate_target',
-                'undo_retention','processes','sessions')
-order  by name
+                'undo_retention','processes','sessions'))
+order  by con_id, name
 /
 
 exit

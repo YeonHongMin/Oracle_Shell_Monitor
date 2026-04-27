@@ -10,6 +10,7 @@ col "Logon_Time" format a20
 col "Program"    format a25
 col "Client_Pid" format a16
 col "Server_Pid" format a16
+col "Con"        format 9999
 @@sqlid_format.sql
 
 select s.sid || ',' || s.serial#                       "Sid,Serial"
@@ -21,6 +22,7 @@ select s.sid || ',' || s.serial#                       "Sid,Serial"
      , nvl(s.sql_id, s.prev_sql_id)                    "SQL_ID"
      , substr(s.process, 1, 16)                        "Client_Pid"
      , substr(p.spid, 1, 16)                           "Server_Pid"
+     , s.con_id                                        "Con"
 from   v$session s, v$process p
 where  s.paddr  = p.addr
   and  s.status = 'ACTIVE'

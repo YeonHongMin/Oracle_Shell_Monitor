@@ -11,8 +11,10 @@ col "Write(%)"      format 999.9
 col "Total_IO(%)"   format 999.9
 col "AvgRd(ms)"     format 9999.99
 col "AvgWr(ms)"     format 9999.99
+col "Con"           format 9999
 
-select fl.tablespace_name
+select df.con_id "Con"
+     , fl.tablespace_name
      , df.name file_name
      , fs.phyrds
      , fs.phywrts
@@ -23,11 +25,11 @@ select fl.tablespace_name
      , round(fs.writetim*10/decode(fs.phywrts,0,1,fs.phywrts), 2) "AvgWr(ms)"
 from   v$datafile df
      , v$filestat fs
-     , dba_data_files fl
+     , cdb_data_files fl
      , (select sum(phyrds) rds, sum(phywrts) wrts from v$filestat) tot
 where  df.file# = fs.file#
   and  df.file# = fl.file_id
-order  by 1,2
+order  by df.con_id, fl.tablespace_name, df.name
 /
 
 exit

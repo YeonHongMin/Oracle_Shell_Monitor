@@ -7,12 +7,14 @@ col "Sid"       format 9999
 col "Object"    format a40
 col "Type"      format a15
 col "Lock_type" format a16
+col "Con"       format 9999
 
 select sid    "Sid"
      , owner  "Owner"
      , object "Object"
      , type   "Type"
      , 'Library Cache Lock' "Lock_type"
+     , con_id "Con"
 from   v$access
 where  sid in (select sid from v$lock where type in ('OD','LB'))
    or  sid in (select session_id from dba_ddl_locks)

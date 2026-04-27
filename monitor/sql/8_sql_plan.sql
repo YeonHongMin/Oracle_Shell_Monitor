@@ -7,6 +7,7 @@ column "Gets/Exec"     format 999,999,999
 column "Elap/Exec(ms)" format 999,999,999.99
 column sql_text        format a200
 column sql_id          format a25
+column "Con"           format 9999
 
 accept v_sql_id    char prompt 'INPUT SQL_ID                  : '
 accept v_child_no  char prompt 'INPUT CHILD NUMBER (default 0): '
@@ -17,7 +18,8 @@ select sql_id, child_number, hash_value, plan_hash_value,
        decode(executions, 0, -1, round(buffer_gets/executions, 3))       "Gets/Exec",
        decode(executions, 0, -1, round(elapsed_time/executions/1000, 3)) "Elap/Exec(ms)",
        executions,
-       rows_processed
+       rows_processed,
+       con_id "Con"
 from   v$sql
 where  sql_id       = '&v_sql_id'
    and child_number = nvl(to_number(nullif('&v_child_no','')), 0)

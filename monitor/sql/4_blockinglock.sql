@@ -9,6 +9,7 @@ col "Waiting Sid"   format 999999999
 col "Lock Type"     format a12
 col "Holding mode"  format a16
 col "Request mode"  format a16
+col "Con"           format 9999
 @@sqlid_format.sql
 
 select bs.username "Blocking User"
@@ -23,6 +24,7 @@ select bs.username "Blocking User"
                         3,'[3] Row-X',4,'[4] Share',5,'[5] S/Row-X',6,'[6] Exclusive',
                         to_char(wk.request)) "Request mode"
      , nvl(bs.sql_id, bs.prev_sql_id) "SQL_ID"
+     , bs.con_id   "Con"
 from   v$lock hk
      , v$session bs
      , v$lock wk

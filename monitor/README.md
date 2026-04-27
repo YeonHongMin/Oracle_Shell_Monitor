@@ -14,7 +14,7 @@ Interactive shell + SQL\*Plus monitoring toolkit for Oracle Database.
 ```
 monitor/
 ├── monitor              ← main interactive menu  (entry point)
-├── tam.run              ← auto-refresh wrapper for individual sections
+├── auto_refresh.sh      ← auto-refresh wrapper for individual sections
 ├── mon.sh               ← background OS+DB process logger
 ├── ha_mon.sh            ← lightweight HA / session count logger
 ├── dml_view.sh          ← DML search + SQL plan helper
@@ -91,7 +91,7 @@ options. Selecting a detailed menu number runs that monitor query.
 73 - Object Invalid List                |  83 - Check Static Query Pattern
 74 - Segment Size(Top 50)               |
 9.AWR (Use Carefully)                   |  0.OTHER
-91 - Create AWR Snapshot                |  M - Auto Refresh Monitoring (tam.run)
+91 - Create AWR Snapshot                |  M - Auto Refresh Monitoring (auto_refresh.sh)
 92 - Create AWR Snapshot (RAC)          |  S - Save To File   → log/monitor_*.log
 93 - Show AWR Snapshot List             |
 94 - Create AWR Report                  |  X - EXIT
@@ -103,15 +103,15 @@ These query `gv$session` / `gv$lock` / `gv$undostat`, so they show every
 instance in a RAC cluster. On a single-instance database they simply return
 the one local instance — they're safe to run anywhere.
 
-## Auto-refresh (`tam.run`)
+## Auto-refresh (`auto_refresh.sh`)
 
 Standalone or invoked from menu **M**. Refreshes a selected section every N
 seconds; press `X<ENTER>` to stop.
 
 ```sh
-./tam.run runsess 5         # refresh active sessions every 5 seconds
-./tam.run swait   3
-./tam.run topwait 10
+./auto_refresh.sh runsess 5         # refresh active sessions every 5 seconds
+./auto_refresh.sh swait   3
+./auto_refresh.sh topwait 10
 ```
 
 Available options:

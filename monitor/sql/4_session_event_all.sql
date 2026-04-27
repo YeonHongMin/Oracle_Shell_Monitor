@@ -7,6 +7,7 @@ col total_timeouts format 999,999,999
 col time_waited    format 999,999,999
 col average_wait   format 999,999,999.99
 col max_wait       format 9,999,999
+col "Con"          format 9999
 
 select sid
      , event
@@ -15,6 +16,7 @@ select sid
      , time_waited
      , average_wait
      , max_wait
+     , con_id "Con"
 from   v$session_event
 where  time_waited > 0
 order  by 1, time_waited desc

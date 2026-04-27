@@ -11,6 +11,7 @@ col "Logon_Time" format a20
 col "Program"    format a25
 col "Block_Sess" format a12
 col "Client_Pid" format a16
+col "Con"        format 9999
 @@sqlid_format.sql
 
 select * from
@@ -28,6 +29,7 @@ select * from
           when s.blocking_session is null then '.'
           else s.blocking_instance||':'||s.blocking_session
         end                                             "Block_Sess"
+      , s.con_id                                        "Con"
  from   gv$session s
  order  by 1,2
 )
@@ -35,7 +37,7 @@ union all
 select null
      , '[Run: '||sum(decode(status,'ACTIVE',cnt,0))||']'
      , '[Tot: '||sum(cnt)||']'
-     , null,null,null,null,null,null,null
+     , null,null,null,null,null,null,null,null
 from (
    select status, count(*) cnt
    from   gv$session
