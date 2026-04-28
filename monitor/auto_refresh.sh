@@ -83,7 +83,7 @@ fi
 
 case $OPTION in
   redowait) loop_sql=4_redonowait.sql;        title="Redo Nowait Information" ;;
-  runsess)  loop_sql=3_run_session.sql;       title="Current Active Session" ;;
+  runsess)  loop_sql=3_run_session_wait.sql;  title="Current Active Session (with wait)" ;;
   session)  loop_sql=3_current_session.sql;   title="Current Session Information" ;;
   sessio)   loop_sql=6_session_io.sql;        title="Session I/O Information" ;;
   sessevent)

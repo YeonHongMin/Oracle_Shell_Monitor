@@ -11,6 +11,7 @@ col "SQL"          format a8
 col "Wait_Event"   format a30
 col "Object_Name"  format a25
 col "W_Time(s)"    format 999,999
+col "SQL_Run(s)"   format FM999,999
 col "Con"          format 9999
 @@sqlid_format.sql
 
@@ -21,6 +22,7 @@ select s.sid || ',' || s.serial#                            "Sid,Serial"
      , round(p.pga_used_mem/1024/1024,2)                    "PGA(MB)"
      , nvl(s.sql_id, s.prev_sql_id)                         "SQL_ID"
      , c.command_name                                       "SQL"
+     , s.last_call_et                                       "SQL_Run(s)"
      , nvl(to_char(s.blocking_session), '.')                "Block_Sess"
      , substr(s.event, 1, 30)                               "Wait_Event"
      , substr(o.owner||'.'||o.object_name, 1, 25)            "Object_Name"
